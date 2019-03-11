@@ -156,6 +156,8 @@ architecture rtl of top is
   signal dir_blue            : std_logic_vector(7 downto 0);
   signal dir_pixel_column    : std_logic_vector(10 downto 0);
   signal dir_pixel_row       : std_logic_vector(10 downto 0);
+  
+  signal rgb_s 				  : std_logic_vector(23 downto 0);
 
 begin
 
@@ -168,8 +170,8 @@ begin
   graphics_lenght <= conv_std_logic_vector(MEM_SIZE*8*8, GRAPH_MEM_ADDR_WIDTH);
   
   -- removed to inputs pin
-  direct_mode <= '1';
-  display_mode     <= "10";  -- 01 - text mode, 10 - graphics mode, 11 - text & graphics
+  direct_mode <= '0';
+  display_mode     <= "11";  -- 01 - text mode, 10 - graphics mode, 11 - text & graphics
   
   font_size        <= x"1";
   show_frame       <= '1';
@@ -250,16 +252,70 @@ begin
   --dir_red
   --dir_green
   --dir_blue
+  
+ 
+	rgb_s <= x"ffffff" when (dir_pixel_row < 480 and dir_pixel_column <= 79) else
+				x"00FFFF" when (dir_pixel_row < 480 and dir_pixel_column > 80 and dir_pixel_column <= 160) else
+				x"FFFF00" when (dir_pixel_row < 480 and dir_pixel_column > 161 and dir_pixel_column <= 240) else
+				x"00FF00" when (dir_pixel_row < 480 and dir_pixel_column > 241 and dir_pixel_column <= 320) else
+				x"FF00FF" when (dir_pixel_row < 480 and dir_pixel_column > 321 and dir_pixel_column <= 400) else
+				x"0000FF" when (dir_pixel_row < 480 and dir_pixel_column > 401 and dir_pixel_column <= 480) else
+				x"FF0000" when (dir_pixel_row < 480 and dir_pixel_column > 481 and dir_pixel_column <= 560) else
+				x"000000" when (dir_pixel_row < 480 and dir_pixel_column > 560);
+				
+	dir_red <= rgb_s(7 downto 0);
+	dir_green <= rgb_s(15 downto 8);
+	dir_blue <= rgb_s(23 downto 16);
+  
  
   -- koristeci signale realizovati logiku koja pise po TXT_MEM
   --char_address
   --char_value
   --char_we
   
+  char_we <= '1';
+  
+  process(pix_clock_s)begin
+		if(rising_edge(pix_clock_s)) then 
+			if(char_address = 4800) then 
+				char_address <= (others => '0');
+			else 
+				char_address <= char_address + 1;
+			end if;
+		end if;
+  end process;
+  
+  char_value <= "010010" when  char_address = 0 else -- R
+						"010101" when  char_address = 1  else -- U
+						"000100" when  char_address = 2  else -- D
+						"000001" when  char_address = 3  else -- A
+						"100000" when  char_address = 4  else --  
+						"001001" when  char_address = 5  else -- I 
+						"100000" when  char_address = 6  else --  
+						"001111" when  char_address = 7  else -- O
+						"000011" when  char_address = 8  else -- C
+						"000001" when  char_address = 9 else
+						"100000"; 
+  
   -- koristeci signale realizovati logiku koja pise po GRAPH_MEM
   --pixel_address
   --pixel_value
   --pixel_we
+  
+  pixel_we <= '1';
+  
+  process(pix_clock_s) begin
+	if(rising_edge(pix_clock_s)) then 
+			if(pixel_address = 9600) then 
+				pixel_address <= (others => '0');
+			else 
+				pixel_address <= pixel_address + 1;
+			end if;
+		end if;
+  end process;
+  
+  pixel_value <= x"ffffffff" when (pixel_address > 3528 and pixel_address < 3532 and pixel_address > 6088 and pixel_address < 6092) else
+						x"00000000";
   
   
 end rtl;
